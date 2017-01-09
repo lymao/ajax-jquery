@@ -1,5 +1,5 @@
 ﻿var homeconfig = {
-    pageSize: 3,
+    pageSize: 8,
     pageIndex: 1,
 }
 var homeController = {
@@ -14,6 +14,81 @@ var homeController = {
                 var value = $(this).val();
 
                 homeController.updateSalary(id, value);
+            }
+        });
+
+        $('#btnAdd').off('click').on('click', function () {
+            $('#myModal').modal('show');
+            homeController.resetForm();
+        });
+
+        $('#btnSave').off('click').on('click', function () {
+            homeController.saveData();
+        });
+
+        $('.btnEdit').off('click').on('click', function () {
+            $('#myModal').modal('show');
+            var id = $(this).data('id');
+            homeController.loadDetail(id);
+        });
+    },
+    loadDetail:function(id){
+        $.ajax({
+            url: '/Home/GetDetail',
+            type: 'GET',
+            dataType: 'json',
+            data: { id:id},
+            success: function (response) {
+                if (response.status == true) {
+                    var data = response.data;
+                    $('#hidID').val(data.ID);
+                    $('#txtName').val(data.Name);
+                    $('#txtSalary').val(data.Salary);
+                    $('#ckStatus').prop('checked', data.Status);
+                }
+                else {
+                    alert(response.message);
+                }
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        });
+    },
+    resetForm: function () {
+        $('#hidID').val('0');
+        $('#txtName').text('');
+        $('#txtSalary').val(1);
+        $('#ckStatus').prop('checked',true);
+    },
+    saveData: function () {
+        var name = $('#txtName').val();
+        var salary = parseFloat($('#txtSalary').val());
+        var status = $('#ckStatus').prop('checked');
+        var id = parseInt($('#hidID').val());
+        var employee = {
+            Name: name,
+            Salary: salary,
+            Status: status,
+            ID: id
+        }
+        $.ajax({
+            url: '/Home/SaveData',
+            type: 'POST',
+            dataType: 'json',
+            data: {strEmployee:JSON.stringify(employee)},
+            success: function (response) {
+                if (response.status == true) {
+                    alert('Save success');
+                    $('#myModal').modal('hide');
+                    homeController.loadData();
+                }
+                else {
+                    alert(response.message);
+                }
+            },
+            error: function (err) {
+                console.log(err)
             }
         });
     },
