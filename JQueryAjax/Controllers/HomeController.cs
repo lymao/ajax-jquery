@@ -24,10 +24,20 @@ namespace JQueryAjax.Controllers
         }
 
         [HttpGet]
-        public JsonResult LoadData(int page, int pageSize = 3)
+        public JsonResult LoadData(string name, string status, int page, int pageSize = 3)
         {
-            var model = _context.Employees.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize);
-            int totalRow = _context.Employees.Count();
+            IEnumerable<Employee> model = _context.Employees;
+            if (!string.IsNullOrEmpty(name))
+                model = model.Where(x => x.Name.Contains(name));
+            if (!string.IsNullOrEmpty(status))
+            {
+                var statusBool = bool.Parse(status);
+                model = model.Where(x => x.Status == statusBool);
+            }
+                int totalRow = model.Count();
+
+             model = model.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize);
+            
             return Json(new
             {
                 data = model,
@@ -58,6 +68,29 @@ namespace JQueryAjax.Controllers
             {
                 status = true
             });
+        }
+        [HttpPost]
+        public JsonResult Delete(int id)
+        {
+            var entity = _context.Employees.Find(id);
+            _context.Employees.Remove(entity);
+            try
+            {
+                _context.SaveChanges();
+                return Json(new
+                {
+                    status = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    status = false,
+                    message = ex.Message
+                });
+            }
+
         }
         [HttpPost]
         public JsonResult SaveData(string strEmployee)
@@ -107,7 +140,7 @@ namespace JQueryAjax.Controllers
             return Json(new
             {
                 status = status,
-                message=message
+                message = message
             });
         }
     }

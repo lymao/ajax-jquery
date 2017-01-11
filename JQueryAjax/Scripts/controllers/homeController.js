@@ -1,5 +1,5 @@
 ﻿var homeconfig = {
-    pageSize: 8,
+    pageSize: 4,
     pageIndex: 1,
 }
 var homeController = {
@@ -17,8 +17,8 @@ var homeController = {
             }
         });
 
-        $('#btnAdd').off('click').on('click', function () {
-            $('#myModal').modal('show');
+        $('#btnAddNew').off('click').on('click', function () {
+            $('#modalAddUpdate').modal('show');
             homeController.resetForm();
         });
 
@@ -26,18 +26,72 @@ var homeController = {
             homeController.saveData();
         });
 
-        $('.btnEdit').off('click').on('click', function () {
-            $('#myModal').modal('show');
+        $('.btn-edit').off('click').on('click', function () {
+            $('#modalAddUpdate').modal('show');
             var id = $(this).data('id');
             homeController.loadDetail(id);
         });
+
+        $('.btn-delete').off('click').on('click', function () {
+            var id = $(this).data('id');
+            bootbox.confirm({
+                size: "small",
+                message: "Are you sure?",
+                callback: function (result) {
+                    if (result === true)
+                        homeController.deleteEmployee(id);
+                    /* result is a boolean; true = OK, false = Cancel*/
+                }
+            })
+        });
+
+        $('#btnSearch').off('click').on('click', function () {
+            homeController.loadData(true);
+        });
+
+        $('#btnReset').off('click').on('click', function () {
+            $('#txtSearch').val('');
+            $('#ddlStatusS').val('');
+            homeController.loadData(true);
+        });
+        $('#txtSearch').off('keypress').on('keypress', function (e) {
+            if (e.which == 13) {
+                homeController.loadData(true);
+            }
+        });
+
     },
-    loadDetail:function(id){
+    deleteEmployee: function (id) {
+        $.ajax({
+            url: '/Home/Delete',
+            data: {
+                id: id
+            },
+            type: 'POST',
+            dataType: 'json',
+            success: function (response) {
+                if (response.status == true) {
+                    bootbox.alert("Delete Success", function () {
+                        homeController.loadData(true);
+                    });
+                }
+                else {
+                    bootbox.alert(response.message);
+                }
+            },
+            error: function (err) {
+                console.log(err);
+            }
+        });
+    },
+    loadDetail: function (id) {
         $.ajax({
             url: '/Home/GetDetail',
+            data: {
+                id: id
+            },
             type: 'GET',
             dataType: 'json',
-            data: { id:id},
             success: function (response) {
                 if (response.status == true) {
                     var data = response.data;
@@ -47,19 +101,13 @@ var homeController = {
                     $('#ckStatus').prop('checked', data.Status);
                 }
                 else {
-                    alert(response.message);
+                    bootbox.alert(response.message);
                 }
             },
             error: function (err) {
-                console.log(err)
+                console.log(err);
             }
         });
-    },
-    resetForm: function () {
-        $('#hidID').val('0');
-        $('#txtName').text('');
-        $('#txtSalary').val(1);
-        $('#ckStatus').prop('checked',true);
     },
     saveData: function () {
         var name = $('#txtName').val();
@@ -74,23 +122,34 @@ var homeController = {
         }
         $.ajax({
             url: '/Home/SaveData',
+            data: {
+                strEmployee: JSON.stringify(employee)
+            },
             type: 'POST',
             dataType: 'json',
-            data: {strEmployee:JSON.stringify(employee)},
             success: function (response) {
                 if (response.status == true) {
-                    alert('Save success');
-                    $('#myModal').modal('hide');
-                    homeController.loadData();
+                    $('#modalAddUpdate').modal('hide');
+                    bootbox.alert("Save Success", function () {
+
+                        homeController.loadData(true);
+                    });
+
                 }
                 else {
-                    alert(response.message);
+                    bootbox.alert(response.message);
                 }
             },
             error: function (err) {
-                console.log(err)
+                console.log(err);
             }
         });
+    },
+    resetForm: function () {
+        $('#hidID').val('0');
+        $('#txtName').val('');
+        $('txtSalary').val(0);
+        $('#ckStatus').prop('checked', true);
     },
     updateSalary: function (id, value) {
         var data = {
@@ -104,19 +163,23 @@ var homeController = {
             data: { model: JSON.stringify(data) },
             success: function (response) {
                 if (response.status) {
-                    alert('Update successed.');
+                    bootbox.alert("Update success");
                 }
                 else {
-                    alert('Update failed.');
+                    bootbox.alert(response.message);
                 }
             }
         })
     },
-    loadData: function () {
+    loadData: function (changePageSize) {
+        var name = $('#txtSearch').val();
+        var status = $('#ddlStatusS').val();
         $.ajax({
             url: '/Home/LoadData',
             type: 'GET',
             data: {
+                name: name,
+                status: status,
                 page: homeconfig.pageIndex,
                 pageSize: homeconfig.pageSize
             },
@@ -138,20 +201,28 @@ var homeController = {
                     $('#tblData').html(html);
                     homeController.paging(response.total, function () {
                         homeController.loadData();
-                    });
+                    }, changePageSize);
                     homeController.registerEvent();
                 }
             }
         })
     },
-    paging: function (totalRow, callback) {
+
+    paging: function (totalRow, callback, changePageSize) {
         var totalPage = Math.ceil(totalRow / homeconfig.pageSize);
+
+        //Unbind pagination if it existed or click change pagesize
+        if ($('#pagination a').length === 0 || changePageSize === true) {
+            $('#pagination').empty();
+            $('#pagination').removeData("twbs-pagination");
+            $('#pagination').unbind("page");
+        }
         $('#pagination').twbsPagination({
             totalPages: totalPage,
             first: "Đầu",
             next: "Tiếp",
             last: "Cuối",
-            prev:"Trước",
+            prev: "Trước",
             visiblePages: 10,
             onPageClick: function (event, page) {
                 homeconfig.pageIndex = page;
